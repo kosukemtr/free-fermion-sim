@@ -17,13 +17,24 @@ def orthogonal_from_hamiltonian(A: np.ndarray) -> np.ndarray:
 
 def covariance_from_occupation(occ, N: int) -> np.ndarray:
     """
-    Build the 2N×2N Majorana covariance matrix Γ corresponding to
-    the Fock state with occupied mode indices in *occ*.
+    Build the 2N×2N Majorana covariance matrix ``Γ`` corresponding to the
+    Fock state with occupied mode indices in ``occ``.
+
+    The covariance matrix is block diagonal with 2×2 blocks
+
+    ``[[0,  s], [-s, 0]]``
+
+    where ``s = +1`` for an occupied mode and ``s = -1`` for an unoccupied
+    mode.
     """
+    if N < 0:
+        raise ValueError("N must be non‑negative")
+
     Γ = np.zeros((2 * N, 2 * N))
-    for p in occ:
-        Γ[2 * p,     2 * p + 1] =  1
-        Γ[2 * p + 1, 2 * p    ] = -1
+    for j in range(N):
+        s = 1 if j in occ else -1
+        Γ[2 * j,     2 * j + 1] =  s
+        Γ[2 * j + 1, 2 * j    ] = -s
     return Γ
 
 
@@ -94,7 +105,7 @@ def sample_evolved_state(occ, U: np.ndarray) -> str:
     Take an initial occupation list *occ*, evolve with orbital unitary U,
     and return one measurement outcome as a bit-string (big-endian).
     """
-    N = len(occ)
+    N = U.shape[0]
     O = orbital_to_majorana_rotation(U)
     Γ = covariance_from_occupation(occ, N)
     Γ_evolved = evolve_covariance(Γ, O)

@@ -77,10 +77,12 @@ def sample_fermion_state(Γ: np.ndarray) -> str:
     Example for N = 4:  '1001'  represents |1 0 0 1⟩ with modes (3 2 1 0).
     """
     N = Γ.shape[0] // 2
-    # Build particle-sector correlator  C = (I + iJ Γ)/2
-    J = np.kron(np.eye(N), np.array([[0, -1], [1, 0]]))
-    C = 0.5 * (np.eye(2 * N) + 1j * J @ Γ)
-    C = C[:N, :N].copy()                   # restrict to particle sector
+    # Build particle-sector correlator ⟨a†_i a_j⟩
+    A = Γ[0::2, 0::2]
+    B = Γ[0::2, 1::2]
+    C = Γ[1::2, 0::2]
+    D = Γ[1::2, 1::2]
+    C = 0.25 * (2 * np.eye(N) - 1j * (A + D) + B - C)
 
     bits_le = []                           # collect bits little-endian first
     rng = np.random.default_rng()
@@ -123,10 +125,12 @@ def get_bitstring_probs_from_covariance(Γ: np.ndarray) -> np.ndarray:
     if Γ.shape != (2 * N, 2 * N):
         raise ValueError("Γ must be 2N×2N")
 
-    # Particle-sector correlator
-    J = np.kron(np.eye(N), np.array([[0, -1], [1, 0]]))
-    C_root = 0.5 * (np.eye(2 * N) + 1j * J @ Γ)
-    C_root = C_root[:N, :N]
+    # Particle-sector correlator ⟨a†_i a_j⟩
+    A = Γ[0::2, 0::2]
+    B = Γ[0::2, 1::2]
+    C = Γ[1::2, 0::2]
+    D = Γ[1::2, 1::2]
+    C_root = 0.25 * (2 * np.eye(N) - 1j * (A + D) + B - C)
 
     def recurse(C_sub):
         m = C_sub.shape[0]
@@ -134,14 +138,17 @@ def get_bitstring_probs_from_covariance(Γ: np.ndarray) -> np.ndarray:
             return {(): 1.0}
 
         p00 = C_sub[0, 0].real
-
-        # branch: unoccupied
         dist0 = recurse(C_sub[1:, 1:])
 
-        # branch: occupied
+        if np.isclose(p00, 0.0):
+            return {(0,) + bits: p for bits, p in dist0.items()}
+
         v = C_sub[:, 0].copy()
         C1 = C_sub - np.outer(v, v.conj()) / C_sub[0, 0]
         dist1 = recurse(C1[1:, 1:])
+
+        if np.isclose(p00, 1.0):
+            return {(1,) + bits: p for bits, p in dist1.items()}
 
         out = {}
         for bits, p in dist0.items():

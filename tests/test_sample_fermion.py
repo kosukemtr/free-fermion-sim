@@ -75,6 +75,13 @@ class TestFermionSampler(unittest.TestCase):
         self.assertIsInstance(out, str)
         self.assertEqual(len(out), N)
 
+    def test_fock_state_sampling_deterministic(self):
+        N = 4
+        occ = [1, 2]
+        Gamma = covariance_from_occupation(occ, N)
+        for _ in range(10):
+            self.assertEqual(sample_fermion_state(Gamma), "0110")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -97,7 +97,15 @@ P(\mathbf{n}) = \mathrm{Pf}(\Gamma_M),
 $$
 
 where $\Gamma_M$ is obtained by selecting rows and columns indexed by
-$M$. Computing a Pfaffian costs $\mathcal{O}(N^3)$ time using Gaussian
+$M$. For a physical covariance matrix all such Pfaffians are real and
+strictly between $0$ and $1$. Moreover, because the state is normalized
+the probabilities add up to unity,
+
+$$
+\sum_M \mathrm{Pf}(\Gamma_M) = 1.
+$$
+
+Computing a Pfaffian costs $\mathcal{O}(N^3)$ time using Gaussian
 elimination, so enumerating all $2^N$ probabilities is exponential in
 $N$, but evaluating a single outcome is polynomial.
 
@@ -105,6 +113,55 @@ To obtain a sample, one may either compute the full distribution when
 $N$ is small or perform sequential sampling mode by mode using conditional
 covariances. Both approaches only require matrix operations scaling
 polynomially with $N$.
+
+### 4.1 Sequential sampling
+
+Sequential sampling constructs a bitstring one mode at a time using
+conditional probabilities derived from the covariance matrix.  Let
+`$\Gamma^{(j)}$` denote the covariance conditioned on the outcomes for
+modes `$0,\ldots,j-1$`.  The probability that mode `$j$` is occupied is
+
+$$
+p_j = \frac{1 + i\,\Gamma^{(j)}_{2j,2j+1}}{2}.
+$$
+
+A Bernoulli random variable `$n_j \in \{0,1\}$` is drawn from this
+probability.  To update the state we partition the conditioned covariance
+matrix as
+
+$$
+\Gamma^{(j)} = \begin{pmatrix}
+  A_j & B_j \\
+  -B_j^\mathrm{T} & C_j
+\end{pmatrix},
+$$
+
+where `$A_j$` is the `$2\times2$` block corresponding to mode `$j$`.
+Denote by `$J_{n_j}$` the covariance of a Fock state with occupation
+`$n_j$`,
+
+$$
+J_{n_j} = \begin{pmatrix}
+  0 & s_j \\
+  -s_j & 0
+\end{pmatrix}, \qquad s_j = (-1)^{1-n_j}.
+$$
+
+The conditional covariance for the remaining modes is obtained via the
+Schur complement
+
+$$
+\Gamma^{(j+1)} = C_j - B_j^\mathrm{T}\left(A_j - J_{n_j}\right)^{-1} B_j.
+$$
+
+Iterating this procedure for all modes yields a bitstring
+`$(n_0,\ldots,n_{N-1})$`.  Multiplying the conditional probabilities at
+each step gives the joint probability of this outcome, which can be
+shown to equal $\mathrm{Pf}(\Gamma_M)$ with $M$ the set of occupied
+modes.  Hence sequential sampling draws from exactly the same
+distribution as the Pfaffian formula.  The cost is dominated by solving
+linear systems for the Schur complements, leading to overall
+`$\mathcal{O}(N^3)$` complexity.
 
 ## 5. Complexity analysis
 
